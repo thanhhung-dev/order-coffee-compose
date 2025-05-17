@@ -1,0 +1,59 @@
+# docker-compose.yml
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: coffee-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Thanhhung1020@
+      MYSQL_DATABASE: order_coffee
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coffee-network
+
+  server:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.server
+    container_name: coffee-backend
+    image: Hungheo/order-coffee-backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/order_coffee
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=Thanhhung1020@
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - coffee-network
+  client:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.client
+    container_name: coffee-client
+    ports:
+      - "5900:5900"  # Port VNC
+      - "6080:6080"  # Port noVNC cho truy cập web
+    extra_hosts:
+    - "localhost:172.20.0.3"
+    restart: unless-stopped
+    depends_on:
+      - server
+    networks:
+      - coffee-network
+volumes:
+  mysql_data:
+
+networks:
+  coffee-network:
