@@ -123,21 +123,6 @@ SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ordercoffee
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=your_password
 ```
-### Docker Volume Management
-
-Docker volumes store persistent data:
-
-```bash
-# List volumes
-docker volume ls | grep vivuchat
-
-# Backup PostgreSQL data
-docker exec -it vivuchat-postgres pg_dump -U postgres vivuchat > backup.sql
-
-# Clean up (WARNING: Removes all data)
-docker-compose down -v
-```
-
 ## Troubleshooting Docker Setup
 
 ### Architecture-specific Issues
