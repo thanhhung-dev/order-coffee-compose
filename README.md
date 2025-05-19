@@ -55,8 +55,8 @@ For Mac users with Apple Silicon (M1/M2) processors, our Docker configuration su
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/vivu-chat.git
-cd vivu-chat
+git clone https://github.com/HungPig/order-coffee-compose.git
+cd src
 
 # Edit docker-compose.yml to use ARM64 architecture
 # Change BUILDPLATFORM values from linux/amd64 to linux/arm64
@@ -64,10 +64,6 @@ cd vivu-chat
 # Start all services
 cd src
 docker-compose up -d
-
-# Pull an AI model optimized for ARM
-docker exec -it vivuchat-ollama ollama pull gemma:2b
-```
 
 ### Specifying Platform in Docker Compose
 
