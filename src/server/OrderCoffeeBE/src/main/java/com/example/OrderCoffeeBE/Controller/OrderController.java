@@ -57,31 +57,95 @@ public class OrderController {
 
 
     @PostMapping
+    @Operation(summary = "Create new order", description = "Create a new order with automatic price calculation")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Order created successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid order data")
+    })
     public ResponseEntity<ApiResponse<orders>> createOrder(@RequestBody PostOrderRequest order) {
-        orders newOrders = this.orderService.createOrder(order);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Create Orders Success", newOrders));
+        try {
+            orders newOrder = orderService.createOrder(order);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Create Order Success", newOrder));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error creating order: " + e.getMessage()));
+        }
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ApiResponse<orders>> updateOrder(@PathVariable int id, @RequestBody PostOrderRequest order) {
-        order.setId(id);
-        orders hungOrders = this.orderService.updateOrder(order);
-        if (hungOrders == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Order not found"));
+    @Operation(summary = "Update order", description = "Update an existing order")
+    public ResponseEntity<ApiResponse<orders>> updateOrder(
+            @Parameter(description = "Order ID", required = true) @PathVariable int id, 
+            @RequestBody PostOrderRequest order) {
+        try {
+            order.setId(id);
+            orders updatedOrder = orderService.updateOrder(order);
+            if (updatedOrder != null) {
+                return ResponseEntity.ok(ApiResponse.success("Update Order Success", updatedOrder));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Order not found"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Error updating order: " + e.getMessage()));
         }
-        return ResponseEntity.ok(ApiResponse.success("Update Order Success", hungOrders));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<orders>> deleteOrder(@PathVariable int id) {
-        orders currentOrder = this.orderService.findById(id);
-        if (currentOrder == null) {
+    @Operation(summary = "Delete order", description = "Soft delete an order")
+    public ResponseEntity<ApiResponse<orders>> deleteOrder(
+            @Parameter(description = "Order ID", required = true) @PathVariable int id) {
+        try {
+            orders currentOrder = this.orderService.findById(id);
+            this.orderService.sortDeleteOrder(id);
+            return ResponseEntity.ok(ApiResponse.success("Delete Order Success", currentOrder));
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Order not found" + id));
+                    .body(ApiResponse.error("Order not found"));
         }
-        this.orderService.sortDeleteOrder(id);
-        return ResponseEntity.ok(ApiResponse.success("Delete Order Success", currentOrder));
+    }
+    
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Update order status", description = "Update only the status of an order with workflow validation")
+    public ResponseEntity<ApiResponse<orders>> updateOrderStatus(
+            @Parameter(description = "Order ID", required = true) @PathVariable int id,
+            @Parameter(description = "New status", required = true) @RequestParam String status) {
+        try {
+            orders updatedOrder = orderService.updateOrderStatus(id, status);
+            return ResponseEntity.ok(ApiResponse.success("Update Order Status Success", updatedOrder));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Order not found"));
+        }
+    }
+
+    @GetMapping("/status/{status}")
+    @Operation(summary = "Get orders by status", description = "Retrieve orders filtered by status")
+    public ResponseEntity<ApiResponse<List<orders>>> getOrdersByStatus(
+            @Parameter(description = "Order status", required = true) @PathVariable String status) {
+        List<orders> orders = orderService.findByStatus(status);
+        return ResponseEntity.ok(ApiResponse.success("Get Orders by Status Success", orders));
+    }
+
+    @GetMapping("/pending")
+    @Operation(summary = "Get pending orders", description = "Retrieve all pending orders for barista interface")
+    public ResponseEntity<ApiResponse<List<orders>>> getPendingOrders() {
+        List<orders> orders = orderService.getPendingOrders();
+        return ResponseEntity.ok(ApiResponse.success("Get Pending Orders Success", orders));
+    }
+
+    @GetMapping("/in-progress")
+    @Operation(summary = "Get in-progress orders", description = "Retrieve all in-progress orders for barista interface")
+    public ResponseEntity<ApiResponse<List<orders>>> getInProgressOrders() {
+        List<orders> orders = orderService.getInProgressOrders();
+        return ResponseEntity.ok(ApiResponse.success("Get In-Progress Orders Success", orders));
     }
 }

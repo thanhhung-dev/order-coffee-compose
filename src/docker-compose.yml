@@ -4,56 +4,86 @@ services:
     image: mysql:8.0
     container_name: coffee-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: Thanhhung1020@
-      MYSQL_DATABASE: order_coffee
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Thanhhung1020@}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-order_coffee}
+      MYSQL_USER: ${MYSQL_USER:-coffeeuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-coffeepass}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./deployment/mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Thanhhung1020@}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - coffee-network
+    restart: unless-stopped
 
   server:
     build:
       context: .
       dockerfile: deployment/Dockerfile.server
+      args:
+        BUILDPLATFORM: ${BUILDPLATFORM:-linux/amd64}
     container_name: coffee-backend
-    image: Hungheo/order-coffee-backend
+    image: ${DOCKER_REGISTRY:-}hungheo/order-coffee-backend:${VERSION:-latest}
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/order_coffee
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-order_coffee}
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=Thanhhung1020@
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-Thanhhung1020@}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${DDL_AUTO:-update}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-Thanhhung1020@}
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - coffee-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   client:
     build:
       context: .
       dockerfile: deployment/Dockerfile.client
+      args:
+        BUILDPLATFORM: ${BUILDPLATFORM:-linux/amd64}
     container_name: coffee-client
+    image: ${DOCKER_REGISTRY:-}hungheo/order-coffee-client:${VERSION:-latest}
+    environment:
+      - API_BASE_URL=http://server:8080/api
+      - DISPLAY_WIDTH=${DISPLAY_WIDTH:-1024}
+      - DISPLAY_HEIGHT=${DISPLAY_HEIGHT:-768}
     ports:
-      - "5900:5900"  # Port VNC
-      - "6080:6080"  # Port noVNC cho truy cập web
+      - "${VNC_PORT:-5900}:5900"  # VNC port
+      - "${NOVNC_PORT:-6080}:6080"  # noVNC web access port
     extra_hosts:
-    - "localhost:172.20.0.3"
+      - "localhost:172.20.0.3"
     restart: unless-stopped
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     networks:
       - coffee-network
+
 volumes:
   mysql_data:
+    driver: local
 
 networks:
   coffee-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
