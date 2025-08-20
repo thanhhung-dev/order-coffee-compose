@@ -4,6 +4,12 @@ import com.example.OrderCoffeeBE.Entity.Request.PostOrderRequest;
 import com.example.OrderCoffeeBE.Entity.orders;
 import com.example.OrderCoffeeBE.Service.impl.OrderServiceImpl;
 import com.example.OrderCoffeeBE.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +21,16 @@ import java.util.List;
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Orders", description = "Order management operations")
 public class OrderController {
     private final OrderServiceImpl orderService;
 
     @GetMapping
+    @Operation(summary = "Get all orders", description = "Retrieve all orders in the system")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No orders found")
+    })
     public ResponseEntity<ApiResponse<List<orders>>> getAllOrder() {
         List<orders> orders = orderService.findAll();
         if (orders.isEmpty()) {
@@ -29,7 +41,13 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<orders>> getOrderById(@PathVariable int id) {
+    @Operation(summary = "Get order by ID", description = "Retrieve a specific order by its ID")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found")
+    })
+    public ResponseEntity<ApiResponse<orders>> getOrderById(
+            @Parameter(description = "Order ID", required = true) @PathVariable int id) {
         orders fetchCategory = this.orderService.findById(id);
         if (fetchCategory == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Order not found " + id));
