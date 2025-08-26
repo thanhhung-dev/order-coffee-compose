@@ -173,7 +173,7 @@ Frontend environment variables are set during build:
                 <a href="https://github.com/HungPig">
                     <img src="https://avatars.githubusercontent.com/u/118031742?v=4" width="100;" alt="Liquidwe"/>
                     <br />
-                    <sub><b>Hưng Heo</b></sub>
+                    <sub><b>Hưng Thanh</b></sub>
                 </a>
             </td>
             <td align="center">
